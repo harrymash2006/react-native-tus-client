@@ -22,4 +22,17 @@ Pod::Spec.new do |s|
 
   s.dependency 'React-Core'
   s.dependency 'TUSKit'
+
+  # Add post_install hook to modify Info.plist
+  s.post_install do |installer|
+    installer.pods_project.targets.each do |target|
+      if target.name == 'RNTusClient'
+        target.build_configurations.each do |config|
+          # Add Info.plist modifications
+          config.build_settings['INFOPLIST_KEY_BGTaskSchedulerPermittedIdentifiers'] = ['io.tus.uploading']
+          config.build_settings['INFOPLIST_KEY_UIBackgroundModes'] = ['processing']
+        end
+      end
+    end
+  end
 end
