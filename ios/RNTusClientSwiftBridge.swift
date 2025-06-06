@@ -24,43 +24,51 @@ import TUSKit
         errorCallback = callback
     }
     
-    @objc public func setupClient(serverURL: String) throws {
+    @objc public func setupClient(_ serverURL: String, error: NSErrorPointer) {
         guard let url = URL(string: serverURL) else {
-            throw NSError(domain: "RNTusClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid server URL"])
+            error?.pointee = NSError(domain: "RNTusClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid server URL"])
+            return
         }
         
         let config = URLSessionConfiguration.background(withIdentifier: "com.tuskit.upload")
         config.isDiscretionary = true
         config.sessionSendsLaunchEvents = true
         
-        client = try TUSClient(
-            server: url,
-            sessionIdentifier: "com.tuskit.upload",
-            sessionConfiguration: config
-        )
-        client?.delegate = self
+        do {
+            client = try TUSClient(
+                server: url,
+                sessionIdentifier: "com.tuskit.upload",
+                sessionConfiguration: config
+            )
+            client?.delegate = self
+        } catch {
+            error?.pointee = error as NSError
+        }
     }
     
-    @objc public func uploadFile(filePath: String, uploadURL: String, metadata: [String: String], completion: @escaping (String?, Error?) -> Void) {
+    @objc public func uploadFile(_ filePath: String, uploadURL: String, metadata: [String: String], completion: @escaping (String?, Error?) -> Void) {
         guard let client = client else {
             completion(nil, NSError(domain: "RNTusClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "Client not initialized"]))
             return
         }
         
         let fileURL = URL(fileURLWithPath: filePath)
-        let uploadId = UUID()
-        
-        uploadCallbacks[uploadId] = completion
+        let uploadURL = URL(string: uploadURL)
         
         do {
-            try client.upload(fileURL: fileURL, metadata: metadata, context: ["uploadURL": uploadURL])
+            let uploadId = try client.uploadFileAt(
+                filePath: fileURL,
+                uploadURL: uploadURL,
+                customHeaders: [:],
+                context: metadata
+            )
+            uploadCallbacks[uploadId] = completion
         } catch {
             completion(nil, error)
-            uploadCallbacks.removeValue(forKey: uploadId)
         }
     }
     
-    @objc public func cancelUpload(uploadId: String) {
+    @objc public func cancelUpload(_ uploadId: String) {
         guard let client = client,
               let uuid = UUID(uuidString: uploadId) else { return }
         
