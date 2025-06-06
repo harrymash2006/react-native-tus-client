@@ -4,7 +4,7 @@ interface Options {
     endpoint: string;
 
     /** An object with custom header values used in all requests. */
-    headers?: object;
+    customHeaders?: object;
 
     /** An object with string values used as additional meta data
      * which will be passed along to the server when (and only when)
@@ -27,7 +27,7 @@ interface Options {
     /**
      * A function called when the upload finished successfully.
      */
-    onSuccess?(): void;
+    onSuccess?(url: string): void;
 }
 
 /** Class representing a tus upload */
@@ -74,7 +74,7 @@ declare class Upload {
     private emitError(error: Error): void;
     private subscribe(): void;
     private unsubscribe(): void;
-    private onSuccess(): void;
+    private onSuccess(url: string): void;
     private onProgress(progress: number): void;
     private onError(error: Error): void;
 }

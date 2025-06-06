@@ -24,7 +24,7 @@ import TUSKit
         errorCallback = callback
     }
     
-    @objc public func setupClient(_ serverURL: String, error: NSErrorPointer) {
+    @objc public func setupClient(_ serverURL: String, chunkSize: Int = 500 * 1024, error: NSErrorPointer) {
         guard let url = URL(string: serverURL) else {
             error?.pointee = NSError(domain: "RNTusClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid server URL"])
             return
@@ -38,7 +38,8 @@ import TUSKit
             client = try TUSClient(
                 server: url,
                 sessionIdentifier: "com.tuskit.upload",
-                sessionConfiguration: config
+                sessionConfiguration: config,
+                chunkSize: chunkSize
             )
             client?.delegate = self
         } catch {
@@ -46,7 +47,7 @@ import TUSKit
         }
     }
     
-    @objc public func uploadFile(_ filePath: String, metadata: [String: String], completion: @escaping (String?, Error?) -> Void) {
+    @objc public func uploadFile(_ filePath: String, customHeaders: [String: String]? = [:], metadata: [String: String], completion: @escaping (String?, Error?) -> Void) {
         guard let client = client else {
             completion(nil, NSError(domain: "RNTusClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "Client not initialized"]))
             return
@@ -57,16 +58,24 @@ import TUSKit
             return
         }
         
+        var uploadError : Error? = nil
+        var uploadId = UUID()
         do {
-            let uploadId = try client.uploadFileAt(
+            uploadId = try client.uploadFileAt(
                 filePath: fileURL,
-                customHeaders: [:],
+                customHeaders: customHeaders ?? [:],
                 context: metadata
             )
-            completion(uploadId.uuidString, nil)
             uploadCallbacks[uploadId] = completion
+            uploadError = nil
         } catch {
-            completion(nil, error)
+            uploadError = error
+        }
+        
+        if uploadError == nil {
+            completion(uploadId.uuidString, nil)
+        } else {
+            completion(nil, uploadError)
         }
     }
     
@@ -117,4 +126,4 @@ import TUSKit
         progressCallback?(id.uuidString, progress)
         //print("progress for \(id.uuidString): \(progress)")
     }
-} 
+}

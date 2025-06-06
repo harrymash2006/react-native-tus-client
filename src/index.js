@@ -9,7 +9,7 @@ if (!RNTusClient) {
 const tusEventEmitter = new NativeEventEmitter(RNTusClient);
 
 const defaultOptions = {
-    headers: {},
+    customHeaders: {},
     metadata: {}
 };
 
@@ -58,6 +58,7 @@ class Upload {
         try {
             this.uploadId = await RNTusClient.uploadFile(
                 this.file,
+                this.options.customHeaders,
                 this.options.metadata
             );
             console.log('Upload started with ID:', this.uploadId);
@@ -110,7 +111,7 @@ class Upload {
         
         // Subscribe to progress events
         this.subscriptions.push(tusEventEmitter.addListener('uploadProgress', payload => {
-            console.log('Progress event received:', payload);
+            console.log('Progress event received:', payload.uploadId + "::"+this.uploadId);
             if (payload.uploadId === this.uploadId) {
                 this.onProgress(payload.progress);
             }
@@ -119,10 +120,10 @@ class Upload {
 
         // Subscribe to completion events
         this.subscriptions.push(tusEventEmitter.addListener('uploadComplete', payload => {
-            console.log('Complete event received:', payload);
+            console.log('Complete event received:', payload.uploadId + "::"+this.uploadId);
             if (payload.uploadId === this.uploadId) {
                 this.url = payload.uploadUrl;
-                this.onSuccess();
+                this.onSuccess(payload.uploadUrl);
                 this.unsubscribe();
                 this.isSubscribed = false;
             }
@@ -131,7 +132,7 @@ class Upload {
 
         // Subscribe to error events
         this.subscriptions.push(tusEventEmitter.addListener('uploadError', payload => {
-            console.log('Error event received:', payload);
+            console.log('Error event received:', payload.uploadId + "::"+this.uploadId);
             if (payload.uploadId === this.uploadId) {
                 this.onError(payload.error);
                 this.unsubscribe();

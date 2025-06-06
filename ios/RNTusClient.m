@@ -55,11 +55,12 @@ RCT_EXPORT_MODULE();
 }
 
 RCT_EXPORT_METHOD(setupClient:(NSString *)serverURL
+                  chunkSize: (NSNumber *)chunkSize
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
     NSError *error;
-    [_bridge setupClient:serverURL error:&error];
+    [_bridge setupClient:serverURL chunkSize:[chunkSize intValue]  error:&error];
     
     if (error) {
         reject(@"setup_error", error.localizedDescription, error);
@@ -69,11 +70,12 @@ RCT_EXPORT_METHOD(setupClient:(NSString *)serverURL
 }
 
 RCT_EXPORT_METHOD(uploadFile:(NSString *)filePath
+                  customHeaders: (NSDictionary *)customHeaders
                   metadata:(NSDictionary *)metadata
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
-    [_bridge uploadFile:filePath metadata:metadata completion:^(NSString *uploadId, NSError *error) {
+    [_bridge uploadFile:filePath customHeaders: customHeaders metadata:metadata completion:^(NSString *uploadId, NSError *error) {
         if (error) {
             reject(@"upload_error", error.localizedDescription, error);
         } else {
