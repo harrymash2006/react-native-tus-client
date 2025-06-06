@@ -1,50 +1,109 @@
 import Foundation
 import TUSKit
 
-@objc class RNTusClientSwiftBridge: NSObject {
-    private let client: TUSClient
-    private var uploads: [String: TUSUpload] = [:]
+@objc class RNTusClientSwiftBridge: NSObject, TUSClientDelegate {
+    private var client: TUSClient?
+    private var uploadCallbacks: [UUID: (String?, Error?) -> Void] = [:]
+    private var progressCallback: ((String, Float) -> Void)?
+    private var completeCallback: ((String, String) -> Void)?
+    private var errorCallback: ((String, Error) -> Void)?
     
     @objc override init() {
-        // Initialize TUSClient with default configuration
-        self.client = TUSClient.shared
         super.init()
     }
     
+    @objc func setProgressCallback(_ callback: @escaping (String, Float) -> Void) {
+        progressCallback = callback
+    }
+    
+    @objc func setCompleteCallback(_ callback: @escaping (String, String) -> Void) {
+        completeCallback = callback
+    }
+    
+    @objc func setErrorCallback(_ callback: @escaping (String, Error) -> Void) {
+        errorCallback = callback
+    }
+    
+    @objc func setupClient(serverURL: String) throws {
+        guard let url = URL(string: serverURL) else {
+            throw NSError(domain: "RNTusClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid server URL"])
+        }
+        
+        let config = URLSessionConfiguration.background(withIdentifier: "com.tuskit.upload")
+        config.isDiscretionary = true
+        config.sessionSendsLaunchEvents = true
+        
+        client = try TUSClient(
+            server: url,
+            sessionIdentifier: "com.tuskit.upload",
+            sessionConfiguration: config
+        )
+        client?.delegate = self
+    }
+    
     @objc func uploadFile(filePath: String, uploadURL: String, metadata: [String: String], completion: @escaping (String?, Error?) -> Void) {
+        guard let client = client else {
+            completion(nil, NSError(domain: "RNTusClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "Client not initialized"]))
+            return
+        }
+        
         let fileURL = URL(fileURLWithPath: filePath)
+        let uploadId = UUID()
         
-        // Create upload
-        let upload = TUSUpload(fileURL: fileURL, uploadURL: URL(string: uploadURL)!, metadata: metadata)
+        uploadCallbacks[uploadId] = completion
         
-        // Store upload reference
-        let uploadId = UUID().uuidString
-        uploads[uploadId] = upload
-        
-        // Start upload
-        client.upload(upload) { [weak self] result in
-            switch result {
-            case .success(let uploadURL):
-                self?.uploads.removeValue(forKey: uploadId)
-                completion(uploadURL.absoluteString, nil)
-            case .failure(let error):
-                self?.uploads.removeValue(forKey: uploadId)
-                completion(nil, error)
-            }
+        do {
+            try client.uploadFile(at: fileURL, metadata: metadata, context: ["uploadURL": uploadURL])
+        } catch {
+            completion(nil, error)
+            uploadCallbacks.removeValue(forKey: uploadId)
         }
     }
     
     @objc func cancelUpload(uploadId: String) {
-        if let upload = uploads[uploadId] {
-            client.cancel(upload)
-            uploads.removeValue(forKey: uploadId)
-        }
+        guard let client = client,
+              let uuid = UUID(uuidString: uploadId) else { return }
+        
+        try? client.cancel(id: uuid)
+        uploadCallbacks.removeValue(forKey: uuid)
     }
     
-    @objc func getUploadProgress(uploadId: String) -> Double {
-        if let upload = uploads[uploadId] {
-            return upload.progress
+    // MARK: - TUSClientDelegate
+    
+    func didStartUpload(id: UUID, context: [String: String]?, client: TUSClient) {
+        // Upload started
+    }
+    
+    func didFinishUpload(id: UUID, url: URL, context: [String: String]?, client: TUSClient) {
+        if let callback = uploadCallbacks[id] {
+            callback(url.absoluteString, nil)
+            uploadCallbacks.removeValue(forKey: id)
         }
-        return 0.0
+        completeCallback?(id.uuidString, url.absoluteString)
+    }
+    
+    func uploadFailed(id: UUID, error: Error, context: [String: String]?, client: TUSClient) {
+        if let callback = uploadCallbacks[id] {
+            callback(nil, error)
+            uploadCallbacks.removeValue(forKey: id)
+        }
+        errorCallback?(id.uuidString, error)
+    }
+    
+    func fileError(error: TUSClientError, client: TUSClient) {
+        // Handle file errors if needed
+    }
+    
+    @available(iOS 11.0, *)
+    func totalProgress(bytesUploaded: Int, totalBytes: Int, client: TUSClient) {
+        // Handle total progress if needed
+    }
+    
+    @available(iOS 11.0, *)
+    func progressFor(id: UUID, context: [String: String]?, bytesUploaded: Int, totalBytes: Int, client: TUSClient) {
+        let progress = Float(bytesUploaded) / Float(totalBytes)
+        progressCallback?(id.uuidString, progress)
     }
 } 
+
+

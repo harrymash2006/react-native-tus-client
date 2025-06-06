@@ -20,12 +20,40 @@
 
 @synthesize uploadStore = _uploadStore;
 
+RCT_EXPORT_MODULE();
+
 - (instancetype)init {
     self = [super init];
     if (self) {
         _sessions = [NSMutableDictionary new];
         _endpoints = [NSMutableDictionary new];
         _bridge = [[RNTusClientSwiftBridge alloc] init];
+        [_bridge setProgressCallback:^(NSString *uploadId, float progress) {
+            if (self->hasListeners) {
+                [self sendEventWithName:@"uploadProgress" body:@{
+                    @"uploadId": uploadId,
+                    @"progress": @(progress)
+                }];
+            }
+        }];
+        
+        [_bridge setCompleteCallback:^(NSString *uploadId, NSString *uploadUrl) {
+            if (self->hasListeners) {
+                [self sendEventWithName:@"uploadComplete" body:@{
+                    @"uploadId": uploadId,
+                    @"uploadUrl": uploadUrl
+                }];
+            }
+        }];
+        
+        [_bridge setErrorCallback:^(NSString *uploadId, NSError *error) {
+            if (self->hasListeners) {
+                [self sendEventWithName:@"uploadError" body:@{
+                    @"uploadId": uploadId,
+                    @"error": error.localizedDescription
+                }];
+            }
+        }];
     }
     return self;
 }
@@ -73,6 +101,19 @@
 
 - (void)stopObserving {
     hasListeners = NO;
+}
+
+RCT_EXPORT_METHOD(setupClient:(NSString *)serverURL
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+    NSError *error;
+    [_bridge setupClient:serverURL error:&error];
+    if (error) {
+        reject(@"setup_error", error.localizedDescription, error);
+    } else {
+        resolve(nil);
+    }
 }
 
 RCT_EXPORT_METHOD(uploadFile:(NSString *)filePath
