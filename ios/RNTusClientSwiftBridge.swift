@@ -46,19 +46,20 @@ import TUSKit
         }
     }
     
-    @objc public func uploadFile(_ filePath: String, uploadURL: String, metadata: [String: String], completion: @escaping (String?, Error?) -> Void) {
+    @objc public func uploadFile(_ filePath: String, metadata: [String: String], completion: @escaping (String?, Error?) -> Void) {
         guard let client = client else {
             completion(nil, NSError(domain: "RNTusClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "Client not initialized"]))
             return
         }
         
-        let fileURL = URL(fileURLWithPath: filePath)
-        let uploadURL = URL(string: uploadURL)
+        guard let fileURL = URL(string: filePath) else {
+            completion(nil, NSError(domain: "file error", code: -2))
+            return
+        }
         
         do {
             let uploadId = try client.uploadFileAt(
                 filePath: fileURL,
-                uploadURL: uploadURL,
                 customHeaders: [:],
                 context: metadata
             )
@@ -79,7 +80,7 @@ import TUSKit
     // MARK: - TUSClientDelegate
     
     public func didStartUpload(id: UUID, context: [String: String]?, client: TUSClient) {
-        // Upload started
+        print("Upload started for \(id.uuidString)")
     }
     
     public func didFinishUpload(id: UUID, url: URL, context: [String: String]?, client: TUSClient) {
@@ -88,6 +89,7 @@ import TUSKit
             uploadCallbacks.removeValue(forKey: id)
         }
         completeCallback?(id.uuidString, url.absoluteString)
+        print("Finished upload for \(id.uuidString)")
     }
     
     public func uploadFailed(id: UUID, error: Error, context: [String: String]?, client: TUSClient) {
@@ -96,22 +98,22 @@ import TUSKit
             uploadCallbacks.removeValue(forKey: id)
         }
         errorCallback?(id.uuidString, error)
+        print("upload failed for \(id.uuidString)")
     }
     
     public func fileError(error: TUSClientError, client: TUSClient) {
-        // Handle file errors if needed
+        print("file error")
     }
     
     @available(iOS 11.0, *)
     public func totalProgress(bytesUploaded: Int, totalBytes: Int, client: TUSClient) {
-        // Handle total progress if needed
+        //print("total progress: \(bytesUploaded)/\(totalBytes)")
     }
     
     @available(iOS 11.0, *)
     public func progressFor(id: UUID, context: [String: String]?, bytesUploaded: Int, totalBytes: Int, client: TUSClient) {
         let progress = Float(bytesUploaded) / Float(totalBytes)
         progressCallback?(id.uuidString, progress)
+        //print("progress for \(id.uuidString): \(progress)")
     }
 } 
-
-

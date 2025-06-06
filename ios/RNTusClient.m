@@ -34,7 +34,7 @@ RCT_EXPORT_MODULE();
             if (self->hasListeners) {
                 [self sendEventWithName:@"uploadError" body:@{
                     @"uploadId": uploadId,
-                    @"error": error.localizedDescription
+                    @"error": error.localizedDescription ?: @"Unknown error"
                 }];
             }
         }];
@@ -69,12 +69,11 @@ RCT_EXPORT_METHOD(setupClient:(NSString *)serverURL
 }
 
 RCT_EXPORT_METHOD(uploadFile:(NSString *)filePath
-                  uploadURL:(NSString *)uploadURL
                   metadata:(NSDictionary *)metadata
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
-    [_bridge uploadFile:filePath uploadURL:uploadURL metadata:metadata completion:^(NSString *uploadUrl, NSError *error) {
+    [_bridge uploadFile:filePath metadata:metadata completion:^(NSString *uploadUrl, NSError *error) {
         if (error) {
             reject(@"upload_error", error.localizedDescription, error);
         } else {
