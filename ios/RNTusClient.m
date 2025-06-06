@@ -1,5 +1,5 @@
 #import "RNTusClient.h"
-#import "TUSKit.h"
+#import "RNTusClient-Swift.h"
 
 #define ON_SUCCESS @"onSuccess"
 #define ON_ERROR @"onError"
@@ -13,14 +13,19 @@
 
 @end
 
-@implementation RNTusClient
+@implementation RNTusClient {
+    RNTusClientSwiftBridge *_bridge;
+    bool hasListeners;
+}
 
 @synthesize uploadStore = _uploadStore;
 
-- (id)init {
-    if(self = [super init]) {
+- (instancetype)init {
+    self = [super init];
+    if (self) {
         _sessions = [NSMutableDictionary new];
         _endpoints = [NSMutableDictionary new];
+        _bridge = [[RNTusClientSwiftBridge alloc] init];
     }
     return self;
 }
@@ -57,77 +62,48 @@
 {
     return dispatch_get_main_queue();
 }
-RCT_EXPORT_MODULE()
 
-
-- (NSArray<NSString *> *)supportedEvents
-{
-    return @[ON_SUCCESS, ON_ERROR, ON_PROGRESS];
+- (NSArray<NSString *> *)supportedEvents {
+    return @[@"uploadProgress", @"uploadComplete", @"uploadError"];
 }
 
-RCT_EXPORT_METHOD(createUpload:(NSString *)fileUrl
-                  options:(NSDictionary *)options
-                  onCreated:(RCTResponseSenderBlock)onCreatedCallback
-                  )
-{
-    NSString *endpoint = [NSString stringWithString: options[@"endpoint"]];
-    NSDictionary *headers = options[@"headers"];
-    NSDictionary *metadata = options[@"metadata"];
-
-    TUSSession *session = [self sessionFor:endpoint];
-
-    NSURL *url = [NSURL fileURLWithPath:[fileUrl hasPrefix:@"file://"]
-      ? [fileUrl substringFromIndex:7]
-      : fileUrl
-    ];
-    TUSResumableUpload *upload = [session createUploadFromFile:url retry:3 headers:headers metadata:metadata];
-
-    [self.endpoints setObject:endpoint forKey: upload.uploadId];
-
-    __weak TUSResumableUpload *_upload = upload;
-    __weak RNTusClient *weakSelf = self;
-    
-    
-    upload.resultBlock = ^(NSURL * _Nonnull fileURL) {
-        [weakSelf sendEventWithName:ON_SUCCESS body:@{
-            @"uploadId": _upload.uploadId,
-            @"uploadUrl": fileURL.absoluteString
-            }];
-    };
-
-    upload.failureBlock = ^(NSError * _Nonnull error) {
-        [weakSelf sendEventWithName:ON_ERROR body:@{ @"uploadId": _upload.uploadId, @"error": error }];
-    };
-
-    upload.progressBlock = ^(int64_t bytesWritten, int64_t bytesTotal) {
-        [weakSelf sendEventWithName:ON_PROGRESS body:@{
-            @"uploadId": _upload.uploadId,
-            @"bytesWritten": [NSNumber numberWithLongLong: bytesWritten],
-            @"bytesTotal": [NSNumber numberWithLongLong:bytesTotal]
-        }];
-    };
-
-    onCreatedCallback(@[upload.uploadId]);
+- (void)startObserving {
+    hasListeners = YES;
 }
 
-RCT_EXPORT_METHOD(resume:(NSString *)uploadId withCallback:(RCTResponseSenderBlock)callback)
-{
-    TUSResumableUpload *upload = [self restoreUpload:uploadId];
-    if(upload == nil) {
-      callback(@[@NO]);
-      return;
-    }
-    [upload resume];
-    callback(@[@YES]);
+- (void)stopObserving {
+    hasListeners = NO;
 }
 
-RCT_EXPORT_METHOD(abort:(NSString *)uploadId withCallback:(RCTResponseSenderBlock)callback)
+RCT_EXPORT_METHOD(uploadFile:(NSString *)filePath
+                  uploadURL:(NSString *)uploadURL
+                  metadata:(NSDictionary *)metadata
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
 {
-    TUSResumableUpload *upload = [self restoreUpload:uploadId];
-    if(upload != nil) {
-      [upload stop];
-    }
-    callback(@[]);
+    [_bridge uploadFile:filePath
+              uploadURL:uploadURL
+              metadata:metadata
+              completion:^(NSString *result, NSError *error) {
+        if (error) {
+            reject(@"upload_error", error.localizedDescription, error);
+        } else {
+            resolve(result);
+        }
+    }];
+}
+
+RCT_EXPORT_METHOD(cancelUpload:(NSString *)uploadId)
+{
+    [_bridge cancelUpload:uploadId];
+}
+
+RCT_EXPORT_METHOD(getUploadProgress:(NSString *)uploadId
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+    double progress = [_bridge getUploadProgress:uploadId];
+    resolve(@(progress));
 }
 
 @end

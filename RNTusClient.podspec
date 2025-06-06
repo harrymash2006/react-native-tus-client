@@ -15,5 +15,5 @@ Pod::Spec.new do |s|
   s.ios.deployment_target = '8.0'
 
   s.dependency 'React-Core'
-  s.dependency 'TUSKit', '~> 1.4.2'
+  s.dependency 'TUSKit'
 end
