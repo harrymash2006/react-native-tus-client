@@ -42,7 +42,7 @@ import TUSKit
             )
             client?.delegate = self
         } catch {
-            error?.pointee = error as NSError
+            
         }
     }
     
