@@ -63,6 +63,7 @@ import TUSKit
                 customHeaders: [:],
                 context: metadata
             )
+            completion(uploadId.uuidString, nil)
             uploadCallbacks[uploadId] = completion
         } catch {
             completion(nil, error)

@@ -73,11 +73,11 @@ RCT_EXPORT_METHOD(uploadFile:(NSString *)filePath
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
-    [_bridge uploadFile:filePath metadata:metadata completion:^(NSString *uploadUrl, NSError *error) {
+    [_bridge uploadFile:filePath metadata:metadata completion:^(NSString *uploadId, NSError *error) {
         if (error) {
             reject(@"upload_error", error.localizedDescription, error);
         } else {
-            resolve(uploadUrl);
+            resolve(uploadId);
         }
     }];
 }
