@@ -1,7 +1,7 @@
 // withTusUploadPlugin.js
 const { withInfoPlist } = require('@expo/config-plugins');
 
-const TUS_UPLOAD_IDENTIFIER = 'com.tuskit.upload';
+const TUS_UPLOAD_IDENTIFIER = 'com.pbeditor.upload';
 
 /**
  * Plugin to add required Info.plist entries for TUS upload background processing

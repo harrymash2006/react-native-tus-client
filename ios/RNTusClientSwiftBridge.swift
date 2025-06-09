@@ -35,20 +35,20 @@ import TUSKit
             return
         }
         
-        let config = URLSessionConfiguration.background(withIdentifier: "com.tuskit.upload")
+        let config = URLSessionConfiguration.background(withIdentifier: "com.pbeditor.upload")
         config.isDiscretionary = true
         config.sessionSendsLaunchEvents = true
         
         do {
             client = try TUSClient(
                 server: url,
-                sessionIdentifier: "TUSKitUpload",
+                sessionIdentifier: "com.pbeditor.upload",
                 sessionConfiguration: config,
                 chunkSize: chunkSize
             )
             client?.delegate = self
         } catch {
-            
+            print("setup error: \(error)")
         }
     }
     
@@ -121,13 +121,13 @@ import TUSKit
     
     @available(iOS 11.0, *)
     public func totalProgress(bytesUploaded: Int, totalBytes: Int, client: TUSClient) {
-        //print("total progress: \(bytesUploaded)/\(totalBytes)")
+        print("total progress: \(bytesUploaded)/\(totalBytes)")
     }
     
     @available(iOS 11.0, *)
     public func progressFor(id: UUID, context: [String: String]?, bytesUploaded: Int, totalBytes: Int, client: TUSClient) {
         let progress = Float(bytesUploaded) / Float(totalBytes)
         progressCallback?(id.uuidString, progress)
-        //print("progress for \(id.uuidString): \(progress)")
+        print("progress for \(id.uuidString): \(progress)")
     }
 }
