@@ -13,9 +13,6 @@ const withTusUploadPlugin = (config) => {
     if (!config.modResults.UIBackgroundModes.includes('processing')) {
       config.modResults.UIBackgroundModes.push('processing');
     }
-    if (!config.modResults.UIBackgroundModes.includes('fetching')) {
-      config.modResults.UIBackgroundModes.push('fetching');
-    }
 
     // Add BGTaskSchedulerPermittedIdentifiers
     config.modResults.BGTaskSchedulerPermittedIdentifiers =
