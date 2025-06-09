@@ -56,12 +56,11 @@ class Upload {
         }
 
         try {
-            this.uploadId = await RNTusClient.uploadFile(
+            RNTusClient.uploadFile(
                 this.file,
                 this.options.customHeaders,
                 this.options.metadata
             );
-            console.log('Upload started with ID:', this.uploadId);
         } catch (error) {
             this.emitError(error);
             this.unsubscribe();
@@ -109,6 +108,12 @@ class Upload {
     subscribe() {
         console.log('Subscribing to events');
         
+        this.subscriptions.push(tusEventEmitter.addListener('uploadStarted', payload => {
+            console.log('Start event received:', payload.uploadId + "::"+this.uploadId);
+            this.uploadId = payload.uploadId
+        }));
+
+        activeListeners++;
         // Subscribe to progress events
         this.subscriptions.push(tusEventEmitter.addListener('uploadProgress', payload => {
             console.log('Progress event received:', payload.uploadId + "::"+this.uploadId);
@@ -120,7 +125,7 @@ class Upload {
 
         // Subscribe to completion events
         this.subscriptions.push(tusEventEmitter.addListener('uploadComplete', payload => {
-            console.log('Complete event received:', payload.uploadId + "::"+this.uploadId);
+            console.log('Complete event received:', payload);
             if (payload.uploadId === this.uploadId) {
                 this.url = payload.uploadUrl;
                 this.onSuccess(payload.uploadUrl);
@@ -151,8 +156,8 @@ class Upload {
         this.subscriptions = [];
     }
 
-    onSuccess() {
-        this.options.onSuccess && this.options.onSuccess();
+    onSuccess(url) {
+        this.options.onSuccess && this.options.onSuccess(url);
     }
 
     onProgress(progress) {

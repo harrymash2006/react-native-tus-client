@@ -5,6 +5,7 @@ import TUSKit
     private var client: TUSClient?
     private var uploadCallbacks: [UUID: (String?, Error?) -> Void] = [:]
     private var progressCallback: ((String, Float) -> Void)?
+    private var startCallback: ((String) -> Void)?
     private var completeCallback: ((String, String) -> Void)?
     private var errorCallback: ((String, Error) -> Void)?
     
@@ -14,6 +15,10 @@ import TUSKit
     
     @objc public func setProgressCallback(_ callback: @escaping (String, Float) -> Void) {
         progressCallback = callback
+    }
+    
+    @objc public func setStartCallback(_ callback: @escaping (String) -> Void) {
+        startCallback = callback
     }
     
     @objc public func setCompleteCallback(_ callback: @escaping (String, String) -> Void) {
@@ -72,9 +77,7 @@ import TUSKit
             uploadError = error
         }
         
-        if uploadError == nil {
-            completion(uploadId.uuidString, nil)
-        } else {
+        if uploadError != nil {
             completion(nil, uploadError)
         }
     }
@@ -91,6 +94,7 @@ import TUSKit
     
     public func didStartUpload(id: UUID, context: [String: String]?, client: TUSClient) {
         print("Upload started for \(id.uuidString)")
+        startCallback?(id.uuidString)
     }
     
     public func didFinishUpload(id: UUID, url: URL, context: [String: String]?, client: TUSClient) {

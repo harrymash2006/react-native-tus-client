@@ -21,6 +21,14 @@ RCT_EXPORT_MODULE();
             }
         }];
         
+        [_bridge setStartCallback:^(NSString *uploadId) {
+            if (self->hasListeners) {
+                [self sendEventWithName:@"uploadStarted" body:@{
+                    @"uploadId": uploadId
+                }];
+            }
+        }];
+        
         [_bridge setCompleteCallback:^(NSString *uploadId, NSString *uploadUrl) {
             if (self->hasListeners) {
                 [self sendEventWithName:@"uploadComplete" body:@{
@@ -43,7 +51,7 @@ RCT_EXPORT_MODULE();
 }
 
 - (NSArray<NSString *> *)supportedEvents {
-    return @[@"uploadProgress", @"uploadComplete", @"uploadError"];
+    return @[@"uploadStarted", @"uploadProgress", @"uploadComplete", @"uploadError"];
 }
 
 - (void)startObserving {
