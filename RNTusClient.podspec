@@ -24,8 +24,5 @@ Pod::Spec.new do |s|
   s.dependency 'TUSKit'
 
   # Add Info.plist modifications
-  s.info_plist = {
-    'BGTaskSchedulerPermittedIdentifiers' => ['io.tus.uploading'],
-    'UIBackgroundModes' => ['processing']
-  }
+  
 end
