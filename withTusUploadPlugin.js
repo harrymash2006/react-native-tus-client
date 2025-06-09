@@ -14,6 +14,14 @@ const withTusUploadPlugin = (config) => {
       config.modResults.UIBackgroundModes.push('processing');
     }
 
+    // Add BGTaskSchedulerPermittedIdentifiers
+    config.modResults.BGTaskSchedulerPermittedIdentifiers =
+      config.modResults.BGTaskSchedulerPermittedIdentifiers || [];
+
+    if (!config.modResults.BGTaskSchedulerPermittedIdentifiers.includes(TUS_UPLOAD_IDENTIFIER)) {
+      config.modResults.BGTaskSchedulerPermittedIdentifiers.push(TUS_UPLOAD_IDENTIFIER);
+    }
+
     return config;
   });
 };

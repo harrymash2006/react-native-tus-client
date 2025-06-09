@@ -9,6 +9,8 @@ import TUSKit
     private var completeCallback: ((String, String) -> Void)?
     private var errorCallback: ((String, Error) -> Void)?
     
+    private let sessionIdentifier = "com.pbeditor.upload"
+    
     @objc public override init() {
         super.init()
     }
@@ -35,14 +37,14 @@ import TUSKit
             return
         }
         
-        let config = URLSessionConfiguration.background(withIdentifier: "com.pbeditor.upload")
+        let config = URLSessionConfiguration.background(withIdentifier: sessionIdentifier)
         config.isDiscretionary = true
         config.sessionSendsLaunchEvents = true
         
         do {
             client = try TUSClient(
                 server: url,
-                sessionIdentifier: "com.pbeditor.upload",
+                sessionIdentifier: sessionIdentifier,
                 sessionConfiguration: config,
                 chunkSize: chunkSize
             )
@@ -50,6 +52,10 @@ import TUSKit
         } catch {
             print("setup error: \(error)")
         }
+    }
+    
+    @objc public func registerBackgroundHandler(_ completionHandler: @escaping () -> Void) {
+        client?.registerBackgroundHandler(completionHandler, forSession: sessionIdentifier)
     }
     
     @objc public func uploadFile(_ filePath: String, customHeaders: [String: String]? = [:], metadata: [String: String], completion: @escaping (String?, Error?) -> Void) {

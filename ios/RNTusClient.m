@@ -50,6 +50,10 @@ RCT_EXPORT_MODULE();
     return self;
 }
 
+- (void)registerBackgroundHandler:(void (^)(void))completionHandler {
+    [_bridge registerBackgroundHandler:completionHandler];
+}
+
 - (NSArray<NSString *> *)supportedEvents {
     return @[@"uploadStarted", @"uploadProgress", @"uploadComplete", @"uploadError"];
 }
