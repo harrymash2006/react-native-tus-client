@@ -7,6 +7,21 @@ const withTusClientAppDelegate = (config) => {
     'ios',
     async (config) => {
       const filePath = path.join(config.modRequest.platformProjectRoot, 'AppDelegate.mm');
+      
+      // Wait for the file to be created
+      let retries = 0;
+      const maxRetries = 10;
+      
+      while (!fs.existsSync(filePath) && retries < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+        retries++;
+      }
+      
+      if (!fs.existsSync(filePath)) {
+        console.warn('AppDelegate.mm not found after waiting. Skipping TUS client modifications.');
+        return config;
+      }
+
       const contents = fs.readFileSync(filePath, 'utf-8');
 
       // Check if the code is already added
