@@ -115,8 +115,8 @@ endpoint | string | **Yes** | URL used to create the upload
 customHeaders | object | No | An object with custom header values used in all requests.
 metadata | object | No | An object with string values used as additional meta data which will be passed along to the server when (and only when) creating a new upload. Can be used for filenames, file types etc.
 onError | function | No | a function called once an error appears. The arguments will be an `Error` instance.
-onProgress | function | No | a function that will be called each time progress information is available. The arguments will be `bytesSent` and `bytesTotal`
-onSuccess | function | No | a function called when the upload finished successfully.
+onProgress | function | No | a function that will be called each time progress information is available. The arguments will be `progress`
+onSuccess | function | No | a function called when the upload finished successfully. The arguments will be `url`
 
 #### Methods
 
