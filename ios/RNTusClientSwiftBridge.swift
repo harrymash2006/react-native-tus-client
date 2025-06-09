@@ -42,7 +42,7 @@ import TUSKit
         do {
             client = try TUSClient(
                 server: url,
-                sessionIdentifier: "com.tuskit.upload",
+                sessionIdentifier: "TUSKitUpload",
                 sessionConfiguration: config,
                 chunkSize: chunkSize
             )
