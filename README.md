@@ -7,11 +7,11 @@ It provides a native tus compliant implementation through the official [TUSKit](
 
 ## Getting started
 
-`$ npm install react-native-tus-client --save`
+`$ npm install https://github.com/harrymash2006/react-native-tus-client.git#latest --save`
 
 or
 
-`$ yarn add react-native-tus-client`
+`$ yarn add https://github.com/harrymash2006/react-native-tus-client.git#latest`
 
 ### Mostly automatic installation
 
@@ -57,48 +57,37 @@ If you don't know where your file is stored, some other library like [react-nati
 ### Upload a file by its absolute path
 
 ```javascript
-import { Upload } from 'react-native-tus-client';
+import { Upload, setupClient } from 'react-native-tus-client';
+
+useEffect(() => {
+    const initializeClient = async () => {
+        try {
+            await setupClient('https://master.tus.io/uploads', 5 * 1024 * 1024);
+            console.log('TUS client initialized successfully');
+        } catch (err) {
+            console.error('Failed to initialize TUS client:', err);
+            setError('Failed to initialize upload client');
+            setStatus('error');
+        }
+    };
+
+    initializeClient();
+}, []);
 
 const absoluteFilePath = // absolute path to your file;
 const upload = new Upload(absoluteFilePath, {
-  endpoint: 'https://master.tus.io/files/', // use your tus server endpoint instead
+  endpoint: 'https://master.tus.io/uploads/', // use your tus server endpoint instead
   onError: error => console.log('error', error),
-  onSuccess: () => {
-    console.log('Upload completed! File url:', upload.url);
+  onSuccess: (url) => {
+    console.log('Upload completed! File url:', url);
   },
-  onProgress: (uploaded, total) => console.log(
-    `Progress: ${(uploaded/total*100)|0}%`)
+  onProgress: (progress) => console.log(
+    `Progress: ${progress}%`)
 });
 upload.start();
 
 ```
 
-### Upload an image using [react-native-image-picker](https://github.com/react-community/react-native-image-picker)
-
-```javascript
-import ImagePicker from 'react-native-image-picker';
-import { Upload } from 'react-native-tus-client';
-
-new Promise((resolve, reject) => {
-  ImagePicker.showImagePicker({ }, ({ uri, error, path }) => {
-    return uri ? resolve(path || uri) : reject(error || null);
-  });
-})
-.then(file => {
-  const upload = new Upload(file, {
-    endpoint: 'https://master.tus.io/files/', // use your tus server endpoint instead
-    onError: error => console.log('error', error),
-    onSuccess: () => {
-      console.log('Upload completed. File url:', upload.url);
-    },
-    onProgress: (uploaded, total) => console.log(
-      `Progress: ${(uploaded/total*100)|0}%`)
-  });
-  upload.start();
-})
-.catch(e => console.log('error', e));
-
-```
 
 
 ## API
@@ -123,7 +112,7 @@ options | object | The options argument used to setup your tus upload. See below
 Property | Type | Mandatory | Description
 -------- | ---- | --------- | :----------
 endpoint | string | **Yes** | URL used to create the upload
-headers | object | No | An object with custom header values used in all requests.
+customHeaders | object | No | An object with custom header values used in all requests.
 metadata | object | No | An object with string values used as additional meta data which will be passed along to the server when (and only when) creating a new upload. Can be used for filenames, file types etc.
 onError | function | No | a function called once an error appears. The arguments will be an `Error` instance.
 onProgress | function | No | a function that will be called each time progress information is available. The arguments will be `bytesSent` and `bytesTotal`
@@ -134,4 +123,3 @@ onSuccess | function | No | a function called when the upload finished successfu
 Name | Description
 ---- | :-----------
 start | Start or resume the upload using the specified file. If no file property is available the error handler will be called.
-abort | Abort the currently running upload request and don't continue. You can resume the upload by calling the start method again.
