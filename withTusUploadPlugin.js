@@ -5,8 +5,6 @@ const TUS_UPLOAD_IDENTIFIER = 'io.tus.uploading';
 
 /**
  * Plugin to add required Info.plist entries for TUS upload background processing
- * @param {import('@expo/config-plugins').ConfigPlugin} config
- * @returns {import('@expo/config-plugins').ConfigPlugin}
  */
 const withTusUploadPlugin = (config) => {
   return withInfoPlist(config, (config) => {
@@ -28,4 +26,5 @@ const withTusUploadPlugin = (config) => {
   });
 };
 
+// Export the plugin as a default export
 module.exports = withTusUploadPlugin;

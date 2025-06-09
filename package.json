@@ -25,6 +25,7 @@
     "react-native": "0.72.0"
   },
   "expo": {
+    "name": "react-native-tus-client",
     "plugins": [
       "./withTusUploadPlugin.js"
     ]
