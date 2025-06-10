@@ -1,14 +1,13 @@
-
-#if __has_include(<React/RCTBridgeModule.h>)
 #import <React/RCTBridgeModule.h>
-#else
-#import "RCTBridgeModule.h"
-#endif
-
 #import <React/RCTEventEmitter.h>
-#import <Foundation/Foundation.h>
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface RNTusClient : RCTEventEmitter <RCTBridgeModule>
 
+- (void)registerBackgroundHandler:(void (^)(void))completionHandler;
+
 @end
+
+NS_ASSUME_NONNULL_END
   

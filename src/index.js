@@ -1,32 +1,45 @@
 import { NativeModules, NativeEventEmitter } from 'react-native';
 
 const { RNTusClient } = NativeModules;
+
+if (!RNTusClient) {
+    console.error('RNTusClient native module is not available');
+}
+
 const tusEventEmitter = new NativeEventEmitter(RNTusClient);
 
 const defaultOptions = {
-    headers: {},
+    customHeaders: {},
     metadata: {}
 };
 
+// Export native methods directly
+export const setupClient = RNTusClient.setupClient;
+export const uploadFile = RNTusClient.uploadFile;
+export const cancelUpload = RNTusClient.cancelUpload;
+
+// Track active listeners
+let activeListeners = 0;
+
 /** Class representing a tus upload */
 class Upload {
-
-  /**
-     *
+    /**
      * @param file The file absolute path.
      * @param settings The options argument used to setup your tus upload.
      */
     constructor(file, options) {
-        this.subscriptions = [];
         this.file = file;
         this.options = Object.assign({}, defaultOptions, options);
+        this.uploadId = null;
+        this.subscriptions = [];
+        this.isSubscribed = false;
     }
 
     /**
      * Start or resume the upload using the specified file.
      * If no file property is available the error handler will be called.
      */
-    start() {
+    async start() {
         if (!this.file) {
             this.emitError(new Error('tus: no file or stream to upload provided'));
             return;
@@ -35,95 +48,120 @@ class Upload {
             this.emitError(new Error('tus: no endpoint provided'));
             return;
         }
-        (this.uploadId
-            ? Promise.resolve()
-            : this.createUpload())
-            .then(() => this.resume())
-            .catch(e => this.emitError(e));
+
+        // Subscribe to events before starting the upload
+        if (!this.isSubscribed) {
+            this.subscribe();
+            this.isSubscribed = true;
+        }
+
+        try {
+            RNTusClient.uploadFile(
+                this.file,
+                this.options.customHeaders,
+                this.options.metadata
+            );
+        } catch (error) {
+            this.emitError(error);
+            this.unsubscribe();
+            this.isSubscribed = false;
+        }
     }
 
     /**
      * Abort the currently running upload request and don't continue.
      * You can resume the upload by calling the start method again.
      */
-    abort() {
+    async abort() {
         if (this.uploadId) {
-            RNTusClient.abort(this.uploadId, (err) => {
-                if (err) {
-                    this.emitError(err);
-                }
-            });
+            try {
+                await RNTusClient.cancelUpload(this.uploadId);
+                this.unsubscribe();
+                this.isSubscribed = false;
+            } catch (error) {
+                this.emitError(error);
+            }
         }
     }
 
-    resume() {
-        RNTusClient.resume(this.uploadId, (hasBeenResumed) => {
-            if (!hasBeenResumed) {
-                this.emitError(new Error('Error while resuming the upload'));
-            }
-        });
+    /**
+     * Get the current upload progress
+     */
+    async getProgress() {
+        if (!this.uploadId) return 0;
+        try {
+            return await RNTusClient.getUploadProgress(this.uploadId);
+        } catch (error) {
+            this.emitError(error);
+            return 0;
+        }
     }
 
     emitError(error) {
         if (this.options.onError) {
             this.options.onError(error);
-        }
-        else {
+        } else {
             throw error;
         }
     }
 
-    createUpload() {
-        return new Promise((resolve, reject) => {
-            const { metadata, headers, endpoint } = this.options;
-            const settings = { metadata, headers, endpoint };
-            RNTusClient.createUpload(this.file, settings, (uploadId, errorMessage) => {
-                this.uploadId = uploadId;
-                if (uploadId == null) {
-                    const error = errorMessage
-                        ? new Error(errorMessage)
-                        : null;
-                    reject(error);
-                }
-                else {
-                    this.subscribe();
-                    resolve();
-                }
-            });
-        });
-    }
-
     subscribe() {
-        this.subscriptions.push(tusEventEmitter.addListener('onSuccess', payload => {
+        console.log('Subscribing to events');
+        
+        this.subscriptions.push(tusEventEmitter.addListener('uploadStarted', payload => {
+            console.log('Start event received:', payload.uploadId + "::"+this.uploadId);
+            this.uploadId = payload.uploadId
+        }));
+
+        activeListeners++;
+        // Subscribe to progress events
+        this.subscriptions.push(tusEventEmitter.addListener('uploadProgress', payload => {
+            console.log('Progress event received:', payload.uploadId + "::"+this.uploadId);
+            if (payload.uploadId === this.uploadId) {
+                this.onProgress(payload.progress);
+            }
+        }));
+        activeListeners++;
+
+        // Subscribe to completion events
+        this.subscriptions.push(tusEventEmitter.addListener('uploadComplete', payload => {
+            console.log('Complete event received:', payload);
             if (payload.uploadId === this.uploadId) {
                 this.url = payload.uploadUrl;
-                this.onSuccess();
+                this.onSuccess(payload.uploadUrl);
                 this.unsubscribe();
+                this.isSubscribed = false;
             }
         }));
-        this.subscriptions.push(tusEventEmitter.addListener('onError', payload => {
+        activeListeners++;
+
+        // Subscribe to error events
+        this.subscriptions.push(tusEventEmitter.addListener('uploadError', payload => {
+            console.log('Error event received:', payload.uploadId + "::"+this.uploadId);
             if (payload.uploadId === this.uploadId) {
                 this.onError(payload.error);
+                this.unsubscribe();
+                this.isSubscribed = false;
             }
         }));
-        this.subscriptions.push(tusEventEmitter.addListener('onProgress', payload => {
-            if (payload.uploadId === this.uploadId) {
-                this.onProgress(payload.bytesWritten, payload.bytesTotal);
-            }
-        }));
+        activeListeners++;
     }
 
     unsubscribe() {
-        this.subscriptions.forEach(subscription => subscription.remove());
+        console.log('Unsubscribing from events');
+        this.subscriptions.forEach(subscription => {
+            subscription.remove();
+            activeListeners--;
+        });
+        this.subscriptions = [];
     }
 
-    onSuccess() {
-        this.options.onSuccess && this.options.onSuccess();
+    onSuccess(url) {
+        this.options.onSuccess && this.options.onSuccess(url);
     }
 
-    onProgress(bytesUploaded, bytesTotal) {
-        this.options.onProgress
-            && this.options.onProgress(bytesUploaded, bytesTotal);
+    onProgress(progress) {
+        this.options.onProgress && this.options.onProgress(progress);
     }
 
     onError(error) {

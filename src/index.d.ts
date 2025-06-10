@@ -4,7 +4,7 @@ interface Options {
     endpoint: string;
 
     /** An object with custom header values used in all requests. */
-    headers?: object;
+    customHeaders?: object;
 
     /** An object with string values used as additional meta data
      * which will be passed along to the server when (and only when)
@@ -20,20 +20,18 @@ interface Options {
 
     /**
      * A function that will be called each time progress information is available.
-     * @param bytesUploaded number of bytes uploaded
-     * @param bytesTotal number of total bytes
+     * @param progress number between 0 and 1 representing upload progress
      */
-    onProgress?(bytesUploaded: number, bytesTotal: number): void;
+    onProgress?(progress: number): void;
 
     /**
      * A function called when the upload finished successfully.
      */
-    onSuccess?(): void;
+    onSuccess?(url: string): void;
 }
 
 /** Class representing a tus upload */
 declare class Upload {
-
     /**
      * Reference to the file absolute path.
      */
@@ -45,12 +43,11 @@ declare class Upload {
      */
     url: string;
 
-    private options;
-    private subscriptions;
-    private uploadId;
+    private options: Options;
+    private subscriptions: Array<{ remove: () => void }>;
+    private uploadId: string | null;
 
     /**
-     *
      * @param file The file absolute path.
      * @param settings The options argument used to setup your tus upload.
      */
@@ -60,21 +57,26 @@ declare class Upload {
      * Start or resume the upload using the specified file.
      * If no file property is available the error handler will be called.
      */
-    start(): void;
+    start(): Promise<void>;
 
     /**
      * Abort the currently running upload request and don't continue.
      * You can resume the upload by calling the start method again.
      */
-    abort(): void;
+    abort(): Promise<void>;
 
-    private resume();
-    private emitError(error);
-    private createUpload();
-    private subscribe();
-    private unsubscribe();
-    private onSuccess();
-    private onProgress(bytesUploaded, bytesTotal);
-    private onError(error);
+    /**
+     * Get the current upload progress
+     * @returns A promise that resolves to a number between 0 and 1
+     */
+    getProgress(): Promise<number>;
+
+    private emitError(error: Error): void;
+    private subscribe(): void;
+    private unsubscribe(): void;
+    private onSuccess(url: string): void;
+    private onProgress(progress: number): void;
+    private onError(error: Error): void;
 }
+
 export { Options, Upload };
