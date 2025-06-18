@@ -45,7 +45,7 @@ import TUSKit
             client = try TUSClient(
                 server: url,
                 sessionIdentifier: sessionIdentifier,
-                sessionConfiguration: config,
+                sessionConfiguration: .background(withIdentifier: sessionIdentifier),
                 chunkSize: chunkSize
             )
             client?.delegate = self
