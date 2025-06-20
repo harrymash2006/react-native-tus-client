@@ -76,7 +76,7 @@ declare class Upload {
     private unsubscribe(): void;
     private onSuccess(url: string): void;
     private onProgress(progress: number): void;
-    private onError(error: Error): void;
+    private onError(error: string): void;
 }
 
 export { Options, Upload };
