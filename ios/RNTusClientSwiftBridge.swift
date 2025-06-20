@@ -7,7 +7,7 @@ import TUSKit
     private var progressCallback: ((String, Float) -> Void)?
     private var startCallback: ((String) -> Void)?
     private var completeCallback: ((String, String) -> Void)?
-    private var errorCallback: ((String, Error) -> Void)?
+    private var errorCallback: ((String, String) -> Void)?
     
     private let sessionIdentifier = "com.pbeditor.upload"
     
@@ -27,7 +27,7 @@ import TUSKit
         completeCallback = callback
     }
     
-    @objc public func setErrorCallback(_ callback: @escaping (String, Error) -> Void) {
+    @objc public func setErrorCallback(_ callback: @escaping (String, String) -> Void) {
         errorCallback = callback
     }
     
@@ -117,8 +117,8 @@ import TUSKit
             callback(nil, error)
             uploadCallbacks.removeValue(forKey: id)
         }
-        errorCallback?(id.uuidString, error)
-        print("upload failed for \(id.uuidString)")
+        errorCallback?(id.uuidString, "\(error)")
+        print("upload failed for \(id.uuidString), \(error)")
     }
     
     public func fileError(error: TUSClientError, client: TUSClient) {
