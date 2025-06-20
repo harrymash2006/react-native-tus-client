@@ -38,11 +38,11 @@ RCT_EXPORT_MODULE();
             }
         }];
         
-        [_bridge setErrorCallback:^(NSString *uploadId, NSError *error) {
+        [_bridge setErrorCallback:^(NSString *uploadId, NSString *error) {
             if (self->hasListeners) {
                 [self sendEventWithName:@"uploadError" body:@{
                     @"uploadId": uploadId,
-                    @"error": error.localizedDescription ?: @"Unknown error"
+                    @"error": error
                 }];
             }
         }];
