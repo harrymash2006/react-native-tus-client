@@ -137,12 +137,10 @@ class Upload {
 
         // Subscribe to error events
         this.subscriptions.push(tusEventEmitter.addListener('uploadError', payload => {
-            console.log('Error event received:', payload.uploadId + "::"+this.uploadId);
-            if (payload.uploadId === this.uploadId) {
-                this.onError(payload.error);
-                this.unsubscribe();
-                this.isSubscribed = false;
-            }
+            console.log('Error event received:', payload, this.uploadId);
+            this.onError(payload.error);
+            this.unsubscribe();
+            this.isSubscribed = false;
         }));
         activeListeners++;
     }
